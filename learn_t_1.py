@@ -15,7 +15,7 @@ class RefinementT(nn.Module):
 
         layers = []
 
-        input_dim = feature_dim + 1
+        input_dim = feature_dim + 1 # feature size for codes? and t
 
         layers.append(nn.Linear(input_dim, hidden_dim))
         layers.append(nn.ReLU())
