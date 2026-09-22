@@ -1,59 +1,78 @@
-import os
+'''
+this will build the (z_t, t) dataset by interpolating many times
+'''
+
 import hydra
-from omegaconf import OmegaConf
 import torch
-from funcmol.models.nffm import sample_normal, sample_time
-from funcmol.utils.utils_fm import compute_code_stats_offline, compute_ot_fast
+import os
 from funcmol.utils.utils_base import setup_fabric
-from funcmol.utils.utils_nf import normalize_code
-from funcmol.dataset.dataset_code import create_code_loaders
+from funcmol.utils.utils_nf import load_neural_field
+from funcmol.utils.utils_fm import compute_codes
+from funcmol.dataset.dataset_field import create_field_loaders
+from funcmol.utils.utils_nf import infer_codes_occs_batch
+from funcmol.dataset.field_maker import FieldMaker
+from funcmol.models.nffm import sample_normal, sample_time
 
 
-@hydra.main(config_path="configs", config_name="train_nffm_qm9", version_base=None)
+@hydra.main(config_path="configs", config_name="collect_codes_t", version_base=None)
 def main(config):
     fabric = setup_fabric(config)
-    config = OmegaConf.to_container(config)
 
-    out_dir = config.get("out_dir", os.path.join(config["dirname"], "t_data"))
-    os.makedirs(out_dir, exist_ok=True)
-    n_iterations = config.get("n_iterations", 10)
+    with torch.no_grad():
+        # load the neural field (encoder, decoder)
+        fabric.print(">> loading nf checkpoint")
+        nf_checkpoint = fabric.load(os.path.join(config["nf_pretrained_path"], "model.pt"))
+        config_nf = nf_checkpoint["config"]
+        config_nf["dset"] = config["dset"]
+        config_nf["dset"]["batch_size"] = config["dset"]["batch_size"]
 
-    loader_train = create_code_loaders(config, split="train", fabric=fabric)
-    code_stats = compute_code_stats_offline(loader_train, "train", fabric, config["normalize_codes"])
-    fabric.print(f">> code_stats: {code_stats}")
+        enc, dec = load_neural_field(nf_checkpoint, fabric, config=config_nf)
+        dec_module = dec.module if hasattr(dec, "module") else dec
 
+    # create the molecular occupancy fields
+    fabric.print(">> creating molecular occupancy fields")
+    field_maker = FieldMaker(config, sample_points=False) # should be false since i am not retraining neural fields
+    field_maker = field_maker.to(fabric.device)
+
+    # data loaders for neural field
+    fabric.print(">> creating neural field data loader")
+    loader_train = create_field_loaders(config, fabric=fabric) # train by default and this is good to start with since there are 10,000 obs in there
+
+    # encode the molecular fields into their latent codes & get the stats
+    fabric.print(">> encoding latent codes")
+    _, code_stats = compute_codes(
+        loader_train, enc, config_nf, "train", fabric, config["normalize_codes"],
+        field_maker=field_maker, code_stats=None
+    )
+    dec_module.set_code_stats(code_stats)
+
+    fabric.print(">> generating data")
     latent_dim = config["decoder"]["code_dim"]
-    use_ot = config.get("nffm", {}).get("use_ot", False)
-    fabric.print(f">> use_ot: {use_ot}")
+    with torch.no_grad():
+        for epoch in range(config["n_epochs"]):
+            zt_shard, t_shard = [], []
 
-    for it in range(n_iterations):
-        aug_idx = torch.randint(0, loader_train.dataset.num_augmentations, [1])[0].item()
-        loader_train.dataset.load_codes(aug_idx)
+            for batch in loader_train:
+                # encode to latent codes for this batch
+                codes, _ = infer_codes_occs_batch(
+                    batch, enc, config, to_cpu=False, field_maker=field_maker,
+                    code_stats=dec_module.code_stats if config["normalize_codes"] else None
+                )
 
-        xt_shard, t_shard = [], []
+                z1 = codes
+                z0 = sample_normal(z1.shape[0], latent_dim).to(fabric.device)
+                t = sample_time(z1.shape[0]).to(fabric.device)
 
-        for batch in loader_train:
-            codes = normalize_code(batch, code_stats)
-            x1 = codes
-            x0 = sample_normal(x1.shape[0], latent_dim).to(fabric.device)
+                # interpolate
+                z_t = (1.0 - t) * z0 + t * z1
 
-            if use_ot:
-                perm = compute_ot_fast(x0, x1)
-                x0 = x0[perm]
+                # save the current z_t, t pair
+                zt_shard.append(z_t.detach().cpu())
+                t_shard.append(t.detach().cpu())
 
-            t = sample_time(x1.shape[0]).to(fabric.device)
-            x_t = (1.0 - t) * x0 + t * x1
+            zt_shard = torch.cat(zt_shard, dim=0)
+            t_shard = torch.cat(t_shard, dim=0)
 
-            xt_shard.append(x_t.detach().cpu())
-            t_shard.append(t.detach().cpu())
-
-        xt_shard = torch.cat(xt_shard, dim=0)
-        t_shard = torch.cat(t_shard, dim=0)
-
-        out_path = os.path.join(out_dir, f"t_data_{it:04d}.pt")
-        torch.save({"xt": xt_shard, "t": t_shard}, out_path)
-        fabric.print(f">> saved {xt_shard.shape[0]} (xt, t) pairs to {out_path}")
-
-
-if __name__ == "__main__":
-    main()
+            out_path = os.path.join(config["out_dir"], f"t_data_{epoch:04d}.pt")
+            torch.save({"z_t": zt_shard, "t": t_shard}, out_path)
+            fabric.print(f">> saved {zt_shard.shape[0]} pairs to {out_path}")

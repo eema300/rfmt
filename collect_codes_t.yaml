@@ -1,0 +1,39 @@
+defaults:
+  - dset: qm9
+  - encoder: cnn
+  - decoder: decoder_global
+  - override hydra/job_logging: custom
+  - _self_
+
+debug: False
+wandb: False
+seed: 1234
+nf_pretrained_path: "/net/dali/home/mscbio/emg386/weights/nf_qm9_20260330_frozen"
+exp_dir: "/net/dali/home/mscbio/emg386/nffm/exp"
+exp_name: "t_data_${dset.dset_name}_${now:%Y%m%d}_${now:%H%M%S}_${now:%f}"
+dirname: "${exp_dir}/${exp_name}"
+
+# data params
+normalize_codes: 1
+
+# training params
+n_epochs: 200 # just for testing it all works
+dset:
+  # batch_size: 2048
+  batch_size: 512
+decoder:
+  code_dim: 1024
+
+# output directory for collecting data
+out_dir: "${dirname}/t_data"
+
+# set the running dir
+hydra:
+  run:
+    dir: ./${dirname}
+  job:
+    config:
+      override_dirname:
+        kv_sep: ""
+        item_sep: "_"
+        exclude_keys: ["exp_dir"]

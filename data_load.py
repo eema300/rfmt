@@ -1,3 +1,7 @@
+'''
+this is the data loader for the small mlp that will learn to predict t using z_t
+'''
+
 from torch.utils.data import DataLoader, random_split
 from pathlib import Path
 from tz_dataset import TZ_Dataset

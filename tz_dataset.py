@@ -1,3 +1,7 @@
+'''
+this is the dataset class the data loader will use
+'''
+
 from torch.utils.data import Dataset
 from pathlib import Path
 

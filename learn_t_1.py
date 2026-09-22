@@ -1,3 +1,7 @@
+'''
+this is the mlp model that will learn t from z_t
+'''
+
 import torch
 import torch.nn as nn
 
