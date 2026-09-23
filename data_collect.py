@@ -20,7 +20,7 @@ def main(config):
 
     with torch.no_grad():
         # load the neural field (encoder, decoder)
-        fabric.print(">> loading nf checkpoint")
+        print(">> loading nf checkpoint")
         nf_checkpoint = fabric.load(os.path.join(config["nf_pretrained_path"], "model.pt"))
         config_nf = nf_checkpoint["config"]
         config_nf["dset"] = config["dset"]
@@ -30,23 +30,23 @@ def main(config):
         dec_module = dec.module if hasattr(dec, "module") else dec
 
     # create the molecular occupancy fields
-    fabric.print(">> creating molecular occupancy fields")
+    print(">> creating molecular occupancy fields")
     field_maker = FieldMaker(config, sample_points=False) # should be false since i am not retraining neural fields
     field_maker = field_maker.to(fabric.device)
 
     # data loaders for neural field
-    fabric.print(">> creating neural field data loader")
+    print(">> creating neural field data loader")
     loader_train = create_field_loaders(config, fabric=fabric) # train by default and this is good to start with since there are 10,000 obs in there
 
     # encode the molecular fields into their latent codes & get the stats
-    fabric.print(">> encoding latent codes")
+    print(">> encoding latent codes")
     _, code_stats = compute_codes(
         loader_train, enc, config_nf, "train", fabric, config["normalize_codes"],
         field_maker=field_maker, code_stats=None
     )
     dec_module.set_code_stats(code_stats)
 
-    fabric.print(">> generating data")
+    print(">> generating data")
     latent_dim = config["decoder"]["code_dim"]
     with torch.no_grad():
         for epoch in range(config["n_epochs"]):
@@ -75,4 +75,8 @@ def main(config):
 
             out_path = os.path.join(config["out_dir"], f"t_data_{epoch:04d}.pt")
             torch.save({"z_t": zt_shard, "t": t_shard}, out_path)
-            fabric.print(f">> saved {zt_shard.shape[0]} pairs to {out_path}")
+            print(f">> saved {zt_shard.shape[0]} pairs to {out_path}")
+
+
+if __name__ == "__main__":
+    main()
