@@ -16,6 +16,12 @@ from funcmol.models.nffm import sample_normal, sample_time
 
 @hydra.main(config_path="configs", config_name="collect_codes_t", version_base=None)
 def main(config):
+
+    out_dir = config["out_dir"]
+    assert "${" not in out_dir, f"out_dir was not resolved: {out_dir}"
+    assert os.path.isabs(out_dir), f"out_dir is not an absolute path: {out_dir}"
+    os.makedirs(out_dir, exist_ok=True)
+
     fabric = setup_fabric(config)
 
     with torch.no_grad():
@@ -46,8 +52,9 @@ def main(config):
     )
     dec_module.set_code_stats(code_stats)
 
-    print(">> generating data")
     latent_dim = config["decoder"]["code_dim"]
+
+    print(">> generating data")
     with torch.no_grad():
         for epoch in range(config["n_epochs"]):
             zt_shard, t_shard = [], []
