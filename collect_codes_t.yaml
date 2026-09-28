@@ -12,6 +12,7 @@ nf_pretrained_path: "/net/dali/home/mscbio/emg386/weights/nf_qm9_20260330_frozen
 exp_dir: "/net/dali/home/mscbio/emg386/nffm/exp"
 exp_name: "t_data_${dset.dset_name}_${now:%Y%m%d}_${now:%H%M%S}_${now:%f}"
 dirname: "${exp_dir}/${exp_name}"
+codes_dir: "/net/dali/home/mscbio/emg386/weights/nf_qm9_rotation_1_frozen"
 
 # data params
 normalize_codes: 1
@@ -20,7 +21,8 @@ normalize_codes: 1
 n_epochs: 200 # just for testing it all works
 dset:
   # batch_size: 2048
-  batch_size: 512
+  # batch_size: 512
+  batch_size: 256
 decoder:
   code_dim: 1024
 
