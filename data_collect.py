@@ -10,7 +10,6 @@ from funcmol.utils.utils_nf import load_neural_field, normalize_code
 from funcmol.utils.utils_fm import compute_codes, compute_code_stats_offline
 from funcmol.dataset.dataset_field import create_field_loaders
 from funcmol.dataset.dataset_code import create_code_loaders
-from funcmol.utils.utils_nf import infer_codes_occs_batch
 from funcmol.dataset.field_maker import FieldMaker
 from funcmol.models.nffm import sample_normal, sample_time
 from omegaconf import OmegaConf
@@ -49,8 +48,8 @@ def main(config):
             config_nf["dset"] = config["dset"]
             config_nf["dset"]["batch_size"] = config["dset"]["batch_size"]
 
-            enc, dec = load_neural_field(nf_checkpoint, fabric, config=config_nf)
-            dec_module = dec.module if hasattr(dec, "module") else dec
+            enc, _ = load_neural_field(nf_checkpoint, fabric, config=config_nf)
+            # dec_module = dec.module if hasattr(dec, "module") else dec
 
             print(">> creating molecular occupancy fields")
             field_maker = FieldMaker(config, sample_points=False) # should be false since i am not retraining neural fields
@@ -67,7 +66,7 @@ def main(config):
                 field_maker=field_maker, code_stats=None
             )
             # dec_module.set_code_stats(code_stats)
-            codes_raw = codes_raw.detach().cpu() # TODO
+            codes_raw = codes_raw.detach().cpu()
 
             code_path = os.path.join(config["codes_dir"], "codes_0000.pt")
             torch.save(codes_raw, code_path) # TODO so this is a tensor and not a dict since the CodeDataset class expects this
@@ -119,3 +118,12 @@ def main(config):
 
 if __name__ == "__main__":
     main()
+
+
+def train_method(config):
+    pass
+
+# get the eweights for fm from emma
+
+
+# 64 samples, 100 timesteps or whatever timesteps we have and then save in batches of 64 to disk

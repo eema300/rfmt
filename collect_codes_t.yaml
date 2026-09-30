@@ -17,15 +17,21 @@ codes_dir: "/net/dali/home/mscbio/emg386/weights/nf_qm9_rotation_1_frozen/train"
 # data params
 normalize_codes: 1
 on_the_fly: True
+num_augmentations: null
 
 # training params
 n_epochs: 10 # just for testing it all works
 dset:
   # batch_size: 2048
   # batch_size: 512
-  batch_size: 256
+  # batch_size: 256
+  batch_size: 128
 decoder:
   code_dim: 1024
+
+# for nffm sampling
+num_samples: 10000
+num_steps: 100
 
 # output directory for collecting data
 out_dir: "${dirname}/t_data"
