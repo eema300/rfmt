@@ -86,7 +86,8 @@ def main(config):
 
     latent_dim = config["decoder"]["code_dim"]
 
-    rfmt_t = RefinementT(feature_dim=config["decoder"]["code_dim"], fabric=fabric)
+    rfmt_t = RefinementT(feature_dim=config["decoder"]["code_dim"], 
+                         fabric=fabric, config=config)
     best_loss = float("inf")
 
     # training dataset size = n_molecules × n_epochs

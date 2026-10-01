@@ -32,7 +32,7 @@ decoder:
 # for nffm sampling
 num_samples: 5000
 num_steps: 200
-wandb: True
+# wandb: True
 
 # output directory for collecting data
 out_dir: "${dirname}/t_data"

@@ -52,7 +52,8 @@ def main(config):
 
     x = x0.to(nffm.device)
 
-    rfmt_t = RefinementT(feature_dim=config["decoder"]["code_dim"], fabric=fabric, eta=eps)
+    rfmt_t = RefinementT(feature_dim=config["decoder"]["code_dim"], 
+                         fabric=fabric, eta=eps, config=config)
     best_loss = float("inf")
 
     # sampling
