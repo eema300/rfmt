@@ -69,4 +69,4 @@ def main(config):
 
         # save the checkpt
         if loss < best_loss:
-            rfmt_t.save_checkpoint(loss)
+            rfmt_t.save_checkpoint(loss=loss, model_type="sample")
