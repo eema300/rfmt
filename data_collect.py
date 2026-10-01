@@ -13,6 +13,7 @@ from funcmol.dataset.dataset_code import create_code_loaders
 from funcmol.dataset.field_maker import FieldMaker
 from funcmol.models.nffm import sample_normal, sample_time
 from omegaconf import OmegaConf
+from learn_t import RefinementT
 
 def assert_dir(config, key):
     dir_name = config[key]
@@ -84,46 +85,41 @@ def main(config):
 
     latent_dim = config["decoder"]["code_dim"]
 
-    print(">> generating data")
-    with torch.no_grad():
-        for epoch in range(config["n_epochs"]):
-            zt_shard, t_shard = [], []
+    rfmt_t = RefinementT(feature_dim=config["decoder"]["code_dim"], fabric=fabric)
+    best_loss = float("inf")
 
-            for batch in loader_train:
-                # # encode to latent codes for this batch
-                # codes, _ = infer_codes_occs_batch(
-                #     batch, enc, config, to_cpu=False, field_maker=field_maker,
-                #     code_stats=dec_module.code_stats if config["normalize_codes"] else None
-                # )
+    # training dataset size = n_molecules × n_epochs
+    print(">> generating data and training mlp")
+    for epoch in range(config["n_epochs"]):
 
-                # z1 = codes
-                z1 = normalize_code(batch, code_stats)
-                z0 = sample_normal(z1.shape[0], latent_dim).to(fabric.device)
-                t = sample_time(z1.shape[0]).to(fabric.device)
+        total_loss, n_examples, = 0.0, 0
 
-                # interpolate
-                z_t = (1.0 - t) * z0 + t * z1
+        for batch in loader_train:
+            # get actual z1 code, sample z0, sample a t
+            z1 = normalize_code(batch, code_stats)
+            z0 = sample_normal(z1.shape[0], latent_dim).to(fabric.device)
+            t = sample_time(z1.shape[0]).to(fabric.device)
 
-                # save the current z_t, t pair
-                zt_shard.append(z_t.detach().cpu())
-                t_shard.append(t.detach().cpu())
+            # interpolate
+            z_t = (1.0 - t) * z0 + t * z1
 
-            zt_shard = torch.cat(zt_shard, dim=0)
-            t_shard = torch.cat(t_shard, dim=0)
+            # use (x, t) as training batch
+            batch_loss = rfmt_t.run_batch(X=z_t, t=t, epoch=epoch)
 
-            out_path = os.path.join(config["out_dir"], f"t_data_{epoch:04d}.pt")
-            torch.save({"z_t": zt_shard, "t": t_shard}, out_path)
-            print(f">> saved {zt_shard.shape[0]} pairs to {out_path}")
+            # loss in batch so far
+            total_loss += batch_loss * z_t.shape[0] # normalizes the loss per batch
+            n_examples += z_t.shape[0]
+
+        # get the loss for this epoch across the batches
+        epoch_loss = total_loss / n_examples
+        print(f" * epoch {epoch} >> avg loss: {epoch_loss:.6f}") # if time wandb
+
+        # save model checkpt
+        if epoch_loss < best_loss:
+            best_loss = epoch_loss
+            rfmt_t.save_checkpoint(loss=epoch_loss, model_type="interpolate")
 
 
 if __name__ == "__main__":
     main()
 
-
-def train_method(config):
-    pass
-
-# get the eweights for fm from emma
-
-
-# 64 samples, 100 timesteps or whatever timesteps we have and then save in batches of 64 to disk
