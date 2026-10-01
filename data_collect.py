@@ -34,6 +34,7 @@ def main(config):
 
     assert_dir(config, "out_dir")
     assert_dir(config, "codes_dir")
+    assert_dir(config, "mle_out_dir")
 
     fabric = setup_fabric(config)
 

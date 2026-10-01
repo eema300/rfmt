@@ -7,10 +7,16 @@ from funcmol.utils.utils_nf import load_neural_field
 from funcmol.utils.utils_fm import load_checkpoint_fm
 from funcmol.models.nffm import create_nffm, sample_normal
 from learn_t import RefinementT
+from data_collect import assert_dir
 
 
 @hydra.main(config_path="configs", config_name="sample_nffm", version_base=None)
 def main(config):
+    config = omegaconf.OmegaConf.to_container(config, resolve=True)
+    
+    assert_dir(config, "out_dir")
+    assert_dir(config, "mle_out_dir")
+
     fabric = setup_fabric(config)
 
     checkpoint_nffm = fabric.load(os.path.join(config["nffm_pretrained_path"], "checkpoint.pth.tar"))
