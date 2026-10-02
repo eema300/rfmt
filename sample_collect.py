@@ -53,7 +53,10 @@ def main(config):
     x = x0.to(nffm.device)
 
     rfmt_t = RefinementT(feature_dim=config["decoder"]["code_dim"], 
-                         fabric=fabric, eta=eps, config=config)
+                         fabric=fabric, config=config)
+    opt = torch.optim.Adam(rfmt_t.parameters(), lr=1e-4)
+    rfmt_t, opt = fabric.setup(rfmt_t, opt)
+    
     best_loss = float("inf")
 
     # sampling
@@ -72,7 +75,7 @@ def main(config):
         x = x + dt * v
 
         # use (x, t) as training batch & print mse
-        loss = rfmt_t.run_batch(X=x, t=t_batch, epoch=i)
+        loss = rfmt_t.run_batch(X=x, t=t_batch, epoch=i, opt=opt)
 
         # save the checkpt
         if loss < best_loss:

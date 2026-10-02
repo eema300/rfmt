@@ -12,15 +12,14 @@ import os
 class RefinementT(nn.Module):
 
     def __init__(self, feature_dim, fabric, config,
-                 eta=1e-4, hidden_dim=256, num_hidden_layers=3, dropout=0.1,):
+                 hidden_dim=256, num_hidden_layers=3, dropout=0.1,):
         
         super().__init__()
 
         self.fabric = fabric
         self.config = config
 
-        self.obj = nn.MSEloss()
-        self.opt = torch.optim.Adam(self.parameters(), lr=eta)
+        self.obj = nn.MSELoss()
 
         layers = []
 
@@ -40,10 +39,8 @@ class RefinementT(nn.Module):
     def forward(self, X):
         return self.network(X)
 
-    def run_batch(self, X, t, epoch):
+    def run_batch(self, X, t, opt):
         self.train(True)
-        total_loss = 0.0
-        n_examples = 0
 
         X = X.to(self.device)
         t = t.to(self.device)
@@ -51,10 +48,10 @@ class RefinementT(nn.Module):
         t_pred = self(X)
         loss = self.obj(t_pred, t) 
 
-        self.opt.zero_grad()
+        opt.zero_grad()
         # loss.backward()
         self.fabric.backward(loss)
-        self.opt.step()
+        opt.step()
 
         return loss.item()
 

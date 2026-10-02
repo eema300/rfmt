@@ -88,6 +88,9 @@ def main(config):
 
     rfmt_t = RefinementT(feature_dim=config["decoder"]["code_dim"], 
                          fabric=fabric, config=config)
+    opt = torch.optim.Adam(rfmt_t.parameters(), lr=1e-4)
+    rfmt_t, opt = fabric.setup(rfmt_t, opt)
+
     best_loss = float("inf")
 
     # training dataset size = n_molecules × n_epochs
@@ -106,7 +109,7 @@ def main(config):
             z_t = (1.0 - t) * z0 + t * z1
 
             # use (x, t) as training batch
-            batch_loss = rfmt_t.run_batch(X=z_t, t=t, epoch=epoch)
+            batch_loss = rfmt_t.run_batch(X=z_t, t=t, epoch=epoch, opt=opt)
 
             # loss in batch so far
             total_loss += batch_loss * z_t.shape[0] # normalizes the loss per batch
