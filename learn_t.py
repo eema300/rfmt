@@ -42,8 +42,8 @@ class RefinementT(nn.Module):
     def run_batch(self, X, t, opt):
         self.train(True)
 
-        X = X.to(self.device)
-        t = t.to(self.device)
+        X = X.to(self.fabric.device)
+        t = t.to(self.fabric.device)
 
         t_pred = self(X)
         loss = self.obj(t_pred, t) 
