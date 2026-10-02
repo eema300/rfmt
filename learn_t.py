@@ -111,10 +111,6 @@ class RefinementTResNet(nn.Module):
 
         self.network = nn.Sequential(*layers)
 
-    def forward(self, x_features, t):
-        if t.dim() == 1:
-            t = t.unsqueeze(-1)
+    def forward(self, X):
 
-        x = torch.cat([x_features, t], dim=-1)
-
-        return self.network(x)
+        return self.network(X)

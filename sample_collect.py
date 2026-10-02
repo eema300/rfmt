@@ -75,7 +75,7 @@ def main(config):
         x = x + dt * v
 
         # use (x, t) as training batch & print mse
-        loss = rfmt_t.run_batch(X=x, t=t_batch, epoch=i, opt=opt)
+        loss = rfmt_t.run_batch(X=x, t=t_batch, opt=opt)
 
         # save the checkpt
         if loss < best_loss:

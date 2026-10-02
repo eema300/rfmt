@@ -109,7 +109,7 @@ def main(config):
             z_t = (1.0 - t) * z0 + t * z1
 
             # use (x, t) as training batch
-            batch_loss = rfmt_t.run_batch(X=z_t, t=t, epoch=epoch, opt=opt)
+            batch_loss = rfmt_t.run_batch(X=z_t, t=t, opt=opt)
 
             # loss in batch so far
             total_loss += batch_loss * z_t.shape[0] # normalizes the loss per batch
