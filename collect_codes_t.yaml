@@ -38,7 +38,7 @@ num_steps: 200
 out_dir: "${dirname}/t_data"
 
 # output for mlp info
-mle_out_dir: "${dirname}/mlp"
+mlp_out_dir: "${dirname}/mlp"
 
 # set the running dir
 hydra:
