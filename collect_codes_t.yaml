@@ -9,6 +9,7 @@ debug: False
 wandb: False
 seed: 1234
 nf_pretrained_path: "/net/dali/home/mscbio/emg386/weights/nf_qm9_20260330_frozen"
+nffm_pretrained_path: "/net/dali/home/mscbio/emg386/weights/nffm_qm9_20260504_145714_635534"
 exp_dir: "/net/dali/home/mscbio/emg386/nffm/exp"
 exp_name: "t_data_${dset.dset_name}_${now:%Y%m%d}_${now:%H%M%S}_${now:%f}"
 dirname: "${exp_dir}/${exp_name}"

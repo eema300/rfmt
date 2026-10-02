@@ -3,14 +3,13 @@ import torch
 import os
 import omegaconf
 from funcmol.utils.utils_base import setup_fabric
-from funcmol.utils.utils_nf import load_neural_field
 from funcmol.utils.utils_fm import load_checkpoint_fm
 from funcmol.models.nffm import create_nffm, sample_normal
 from learn_t import RefinementT
 from data_collect import assert_dir
 
 
-@hydra.main(config_path="configs", config_name="sample_nffm", version_base=None)
+@hydra.main(config_path="configs", config_name="collect_codes_t", version_base=None)
 def main(config):
     config = omegaconf.OmegaConf.to_container(config, resolve=True)
     
@@ -30,7 +29,6 @@ def main(config):
     fabric.print(f"updated config: {config}")
 
     # load checkpoint
-    # with torch.no_grad():
     nffm = create_nffm(config, fabric)
     nffm, code_stats, _ = load_checkpoint_fm(nffm, config["nffm_pretrained_path"], fabric=fabric)
     nffm = fabric.setup_module(nffm)
@@ -65,18 +63,18 @@ def main(config):
         t = t0 + i * dt
         t_batch = torch.full((x.shape[0], 1), t, device=nffm.device)
 
-        # predict x_1
-        x1_hat = nffm(x, t_batch)
-
-        # calc velocity field based on x_1
-        v = (x1_hat - x) / max(1.0 - float(t), eps)
-
-        # update using velocity
-        x = x + dt * v
+        with torch.no_grad(): # need this here or else x links back through foward computation and prev iteration x's
+            x1_hat = nffm(x, t_batch)
+            v = (x1_hat - x) / max(1.0 - float(t), eps)
+            x = x + dt * v
 
         # use (x, t) as training batch & print mse
-        loss = rfmt_t.run_batch(X=x, t=t_batch, opt=opt)
+        batch_loss = rfmt_t.run_batch(X=x, t=t_batch, opt=opt)
 
         # save the checkpt
-        if loss < best_loss:
-            rfmt_t.save_checkpoint(loss=loss, model_type="sample")
+        if batch_loss < best_loss:
+            best_loss = batch_loss
+            rfmt_t.save_checkpoint(loss=batch_loss, model_type="sample")
+
+if __name__ == "__main__":
+    main()
