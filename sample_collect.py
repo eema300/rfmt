@@ -15,7 +15,7 @@ def main(config):
     config = omegaconf.OmegaConf.to_container(config, resolve=True)
     
     assert_dir(config, "out_dir")
-    assert_dir(config, "mle_out_dir")
+    assert_dir(config, "mlp_out_dir")
 
     fabric = setup_fabric(config)
 
