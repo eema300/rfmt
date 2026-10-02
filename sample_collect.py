@@ -7,6 +7,7 @@ from funcmol.utils.utils_fm import load_checkpoint_fm
 from funcmol.models.nffm import create_nffm, sample_normal
 from learn_t import RefinementT
 from data_collect import assert_dir
+from plot_mse import plot_mse_with_best_dict
 
 
 @hydra.main(config_path="configs", config_name="collect_codes_t", version_base=None)
@@ -57,9 +58,13 @@ def main(config):
     
     best_loss = float("inf")
 
+    save_mse = {}
+
     # sampling
     # training dataset size = num_samples × num_steps
     for i in range(num_steps):
+        new_best_flag = False
+
         t = t0 + i * dt
         t_batch = torch.full((x.shape[0], 1), t, device=nffm.device)
 
@@ -75,6 +80,11 @@ def main(config):
         if batch_loss < best_loss:
             best_loss = batch_loss
             rfmt_t.save_checkpoint(loss=batch_loss, model_type="sample")
+            new_best_flag = True
+
+        # for plotting
+        save_mse[i] = (batch_loss, new_best_flag)
+
 
 if __name__ == "__main__":
     main()
