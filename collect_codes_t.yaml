@@ -14,25 +14,25 @@ exp_dir: "/net/dali/home/mscbio/emg386/nffm/exp"
 exp_name: "t_data_${dset.dset_name}_${now:%Y%m%d}_${now:%H%M%S}_${now:%f}"
 dirname: "${exp_dir}/${exp_name}"
 codes_dir: "/net/dali/home/mscbio/emg386/weights/nf_qm9_rotation_1_frozen"
+plots_path: "/net/dali/home/mscbio/emg386/rfmt"
 
 # data params
 normalize_codes: 1
-on_the_fly: True
+on_the_fly: False
 num_augmentations: null
 
 # training params
-n_epochs: 10 # just for testing it all works
+n_epochs: 100 # for both interpolation and sampled based training
 dset:
-  # batch_size: 2048
-  # batch_size: 512
-  # batch_size: 256
   batch_size: 128
 decoder:
   code_dim: 1024
 
-# for nffm sampling
-num_samples: 5000
-num_steps: 200
+# for nffm sampling-based training
+num_samples: 64
+num_steps: 100
+n_epochs_train: 20
+n_epochs_val: 5
 # wandb: True
 
 # output directory for collecting data

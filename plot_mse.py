@@ -67,6 +67,7 @@ def plot_mse_with_best_dict(
  
 if __name__ == "__main__":
 
+    # testing (using real mse data)
     interpolate_mse = {
         1: (0.010431766937221957, True),
         2: (0.002623275434872963, True),
@@ -79,4 +80,16 @@ if __name__ == "__main__":
         9: (0.0013284885572015673, True),
     }
 
-    p = plot_mse_with_best_dict(mse_dict=interpolate_mse)
+    sample_mse = {
+        1: (0.0017857218626886606, True),
+        2: (0.00097010558238253, True),
+        3: (0.0007852850249037147, True),
+        4: (0.0006208212580531836, True),
+        5: (0.0005418909713625908, True),
+        6: (0.0004590752942021936, True),
+        7: (0.00042529701022431254, True),
+        8: (0.00041915677138604224, True),
+        9: (0.0003788627509493381, True)
+    }
+
+    p = plot_mse_with_best_dict(mse_dict=sample_mse, xlabel='Batch', title='Training MSE')

@@ -5,6 +5,8 @@ this will build the (z_t, t) dataset by interpolating num_epoch times per molecu
 import hydra
 import torch
 import os
+import sys
+import copy
 from funcmol.utils.utils_base import setup_fabric
 from funcmol.utils.utils_nf import load_neural_field, normalize_code
 from funcmol.utils.utils_fm import compute_codes, compute_code_stats_offline
@@ -13,7 +15,9 @@ from funcmol.dataset.dataset_code import create_code_loaders
 from funcmol.dataset.field_maker import FieldMaker
 from funcmol.models.nffm import sample_normal, sample_time
 from omegaconf import OmegaConf
+sys.path.append("/net/dali/home/mscbio/emg386/rfmt")
 from learn_t import RefinementT
+from plot_mse import plot_mse_with_best_dict
 
 def assert_dir(config, key):
     dir_name = config[key]
@@ -86,18 +90,22 @@ def main(config):
 
     latent_dim = config["decoder"]["code_dim"]
 
-    rfmt_t = RefinementT(feature_dim=config["decoder"]["code_dim"], 
+    # initialize model and optimizer
+    rfmt_t = RefinementT(feature_dim=latent_dim, 
                          fabric=fabric, config=config)
     opt = torch.optim.Adam(rfmt_t.parameters(), lr=1e-4)
     rfmt_t, opt = fabric.setup(rfmt_t, opt)
 
     best_loss = float("inf")
+    best_model = copy.deepcopy(rfmt_t.state_dict())
 
     # training dataset size = n_molecules × n_epochs
     print(">> generating data and training mlp")
     for epoch in range(config["n_epochs"]):
 
-        total_loss, n_examples, = 0.0, 0
+        epoch_loss = 0.0
+        num_examples = 0
+        new_best_flag = False
 
         for batch in loader_train:
             # get actual z1 code, sample z0, sample a t
@@ -112,17 +120,34 @@ def main(config):
             batch_loss = rfmt_t.run_batch(X=z_t, t=t, opt=opt)
 
             # loss in batch so far
-            total_loss += batch_loss * z_t.shape[0] # normalizes the loss per batch
-            n_examples += z_t.shape[0]
+            epoch_loss += batch_loss * z_t.shape[0] # normalizes the loss per batch
+            num_examples += z_t.shape[0]
 
         # get the loss for this epoch across the batches
-        epoch_loss = total_loss / n_examples
+        if num_examples != 0:
+            epoch_loss /= num_examples
         print(f" * epoch {epoch} >> avg loss: {epoch_loss:.6f}") # if time wandb
 
         # save model checkpt
         if epoch_loss < best_loss:
-            best_loss = epoch_loss
             rfmt_t.save_checkpoint(loss=epoch_loss, model_type="interpolate")
+            best_model = copy.deepcopy(rfmt_t.state_dict())
+            best_loss = epoch_loss
+            new_best_flag = True
+
+        # for plotting
+        rfmt_t.plot_mse[epoch] = (epoch_loss, new_best_flag)
+
+    # update model object to reflect the best model
+    rfmt_t.is_fit = True
+    rfmt_t.best_train_loss = best_loss
+    rfmt_t.load_state_dict(best_model)
+
+    # plot the training mse
+    plot_mse_with_best_dict(mse_dict=rfmt_t.plot_mse, save_path=config["plots_path"])
+
+    # evaluate on the sampled validation data
+    # rfmt_t.evaluate()
 
 
 if __name__ == "__main__":
