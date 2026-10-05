@@ -110,7 +110,7 @@ def main(config):
     rfmt_t = rfmt_t.fit(train_data_loader=train_mlp_loader, epochs=num_epochs_mlp, opt=opt)
 
     # evaluate fit mlp model
-    val_loss = rfmt_t.evaluate(val_mlp_loader)
+    val_loss = rfmt_t.evaluate(val_mlp_loader, colletion_type="sample")
     print(f"validation loss: {val_loss}")
 
     # plot training mse
