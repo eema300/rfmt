@@ -5,10 +5,11 @@ this is the mlp model that will learn t from z_t
 '''
 
 import torch
-import torch.nn as nn
 import os
-from tqdm import tqdm
 import copy
+import csv
+import torch.nn as nn
+from tqdm import tqdm
 
 
 class RefinementT(nn.Module):
@@ -44,14 +45,16 @@ class RefinementT(nn.Module):
     def forward(self, X):
         return self.network(X)
 
-    def run_batch(self, X, t, opt):
+    # collection_type: "interpolate" or "sample"
+    def run_batch(self, X, t, opt, collection_type: str, epoch=None):
         self.train(True)
 
         X = X.to(self.fabric.device)
         t = t.to(self.fabric.device)
 
         t_pred = self(X)
-        self.print_pred(t_pred, t)
+        self.print_pred(t_pred=t_pred, t_actual=t,
+                        filename=f"{collection_type}_train.csv", epoch=epoch)
         loss = self.obj(t_pred, t) 
 
         opt.zero_grad()
@@ -76,7 +79,8 @@ class RefinementT(nn.Module):
             new_best_flag = False
 
             for batch in tqdm(train_data_loader):
-                batch_loss = self.run_batch(X=batch[0], t=batch[1], opt=opt)
+                batch_loss = self.run_batch(X=batch[0], t=batch[1], opt=opt,
+                                            collection_type="sample", epoch=epoch)
                 epoch_loss += batch_loss * batch[0].shape[0]
                 num_examples += batch[0].shape[0]
 
@@ -98,10 +102,11 @@ class RefinementT(nn.Module):
 
         self.load_state_dict(best_model)
         return self
-                
+
     # use on either sample_collect.py or data_collect.py 
     # TODO: rename data_collect.py -> interpolate_collect.py
-    def evaluate(self, val_data_loader):
+    # collection_type: "interpolate" or "sample"
+    def evaluate(self, val_data_loader, collection_type: str):
         total_loss = 0.0
         num_examples = 0
 
@@ -112,7 +117,8 @@ class RefinementT(nn.Module):
             for batch in tqdm(val_data_loader):
                 # make prediction
                 t_pred = self(batch[0])
-                self.print_pred(t_pred, batch[1])
+                self.print_pred(t_pred=t_pred, t_actual=batch[1],
+                                filename=f"{collection_type}_validation.csv")
                 
                 # accumulate loss
                 loss = (self.obj(t_pred, batch[1])).item()
@@ -124,8 +130,29 @@ class RefinementT(nn.Module):
         return total_loss
 
     @staticmethod
-    def print_pred(t_pred, t):
-        print(f"t_pred, t_actual\n{torch.cat((t_pred, t), dim=1)}")
+    def print_pred(t_pred, t_actual, filename, epoch=None):
+        # make the dim (batch_size, 2)
+        data = torch.cat((t_pred, t_actual), dim=1)
+
+        # convert to list
+        data = data.detach().cpu().tolist()
+
+        file_exists = os.path.exists(filename) and os.path.getsize(filename) > 0
+
+        with open(filename, "a", newline="") as f:
+            writer = csv.writer(f)
+
+            if not file_exists:
+                if epoch is None:
+                    writer.writerow(["t_pred", "t_actual"])
+                else:
+                    writer.writerow(["epoch", "t_pred", "t_actual"])
+
+            for t_p, t_a in data:
+                if epoch is None:
+                    writer.writerow([t_p, t_a])
+                else:
+                    writer.writerow([epoch, t_p, t_a])
 
 
 # class ResNetBlock(nn.Module):
