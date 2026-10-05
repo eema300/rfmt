@@ -115,6 +115,10 @@ class RefinementT(nn.Module):
 
         with torch.no_grad():
             for batch in tqdm(val_data_loader):
+                # set to device
+                batch[0] = batch[0].to(self.fabric.device)
+                batch[1] = batch[1].to(self.fabric.device)
+
                 # make prediction
                 t_pred = self(batch[0])
                 self.print_pred(t_pred=t_pred, t_actual=batch[1],
@@ -130,7 +134,9 @@ class RefinementT(nn.Module):
         return total_loss
 
     @staticmethod
-    def print_pred(t_pred, t_actual, filename, epoch=None):
+    def print_pred(t_pred, t_actual, path_name, filename, epoch=None):
+        full_path = os.path.join(path_name, filename)
+        
         # make the dim (batch_size, 2)
         data = torch.cat((t_pred, t_actual), dim=1)
 
