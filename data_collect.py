@@ -145,7 +145,8 @@ def main(config):
     rfmt_t.load_state_dict(best_model)
 
     # plot the training mse
-    plot_mse_with_best_dict(mse_dict=rfmt_t.plot_mse, save_path=config["plots_path"])
+    save_plot = os.path.join(config["plots_path"], "interpolate_mse_graph_vanilla.png")
+    plot_mse_with_best_dict(mse_dict=rfmt_t.plot_mse, save_path=save_plot)
 
     # evaluate on the sampled validation data
     # rfmt_t.evaluate()

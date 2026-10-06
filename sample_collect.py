@@ -114,7 +114,8 @@ def main(config):
     print(f"validation loss: {val_loss}")
 
     # plot training mse
-    plot_mse_with_best_dict(mse_dict=rfmt_t.plot_mse, save_path=config["plots_path"])
+    save_plot = os.path.join(config["plots_path"], "sample_mse_graph_vanilla.png")
+    plot_mse_with_best_dict(mse_dict=rfmt_t.plot_mse, save_path=save_plot)
 
 
 if __name__ == "__main__":

@@ -54,6 +54,7 @@ class RefinementT(nn.Module):
 
         t_pred = self(X)
         self.print_pred(t_pred=t_pred, t_actual=t,
+                        path_name=self.config["csv_dir"],
                         filename=f"{collection_type}_train.csv", epoch=epoch)
         loss = self.obj(t_pred, t) 
 
@@ -122,6 +123,7 @@ class RefinementT(nn.Module):
                 # make prediction
                 t_pred = self(batch[0])
                 self.print_pred(t_pred=t_pred, t_actual=batch[1],
+                                path_name=self.config["csv_dir"],
                                 filename=f"{collection_type}_validation.csv")
                 
                 # accumulate loss
@@ -143,9 +145,9 @@ class RefinementT(nn.Module):
         # convert to list
         data = data.detach().cpu().tolist()
 
-        file_exists = os.path.exists(filename) and os.path.getsize(filename) > 0
+        file_exists = os.path.exists(full_path) and os.path.getsize(full_path) > 0
 
-        with open(filename, "a", newline="") as f:
+        with open(full_path, "a", newline="") as f:
             writer = csv.writer(f)
 
             if not file_exists:
