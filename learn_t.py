@@ -163,6 +163,25 @@ class RefinementT(nn.Module):
                     writer.writerow([epoch, t_p, t_a])
 
 
+def load_checkpoint(chkpt_path, feat_dim, fabric, config, hidden_dim=256,
+                    num_hidden_layers=3, dropout=0.1):
+
+    model = RefinementT(
+        feature_dim=feat_dim,
+        fabric=fabric,
+        config=config,
+        hidden_dim=hidden_dim,
+        num_hidden_layers=num_hidden_layers,
+        dropout=dropout,
+    )
+
+    state_dict = torch.load(chkpt_path, map_location="cpu")
+    model.load_state_dict(state_dict)
+    model.eval()
+
+    return model
+
+
 # class ResNetBlock(nn.Module):
 #     def __init__(self, hidden_dim):
 #         super().__init__()

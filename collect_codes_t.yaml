@@ -42,6 +42,11 @@ out_dir: "${dirname}/t_data"
 # output for mlp info
 mlp_out_dir: "${dirname}/mlp"
 
+# for loading the mlp checkpoints
+mlp_pretrained_path: "${exp_dir}/vanilla_mlp"
+interpolate_pt_path: "${mlp_pretrained_path}/interpolate-best_rfmt_t.pt"
+sample_pt_path: "${mlp_pretrained_path}/sample-best_rfmt_t.pt"
+
 # set the running dir
 hydra:
   run:
