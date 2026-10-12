@@ -1,8 +1,10 @@
 import os
 import omegaconf
 import torch
+import sys
 from funcmol.models.nffm import create_nffm, sample_normal
 from funcmol.utils.utils_fm import load_checkpoint_fm
+sys.path.append("/net/dali/home/mscbio/emg386/rfmt")
 from tz_dataset import TZ_Dataset
 from learn_t import load_checkpoint
 
