@@ -7,17 +7,20 @@ import torch
 import os
 import sys
 import copy
+from torch.utils.data import DataLoader
 from funcmol.utils.utils_base import setup_fabric
 from funcmol.utils.utils_nf import load_neural_field, normalize_code
 from funcmol.utils.utils_fm import compute_codes, compute_code_stats_offline
 from funcmol.dataset.dataset_field import create_field_loaders
 from funcmol.dataset.dataset_code import create_code_loaders
 from funcmol.dataset.field_maker import FieldMaker
-from funcmol.models.nffm import sample_normal, sample_time
+from funcmol.models.nffm import sample_normal, sample_time_uniform
 from omegaconf import OmegaConf
 sys.path.append("/net/dali/home/mscbio/emg386/rfmt")
 from learn_t import RefinementT
+from tz_dataset import TZ_Dataset
 from plot_mse import plot_mse_with_best_dict
+from sample_collect import import_nffm, collect_data
 
 def assert_dir(config, key):
     dir_name = config[key]
@@ -87,13 +90,21 @@ def main(config):
     loader_train = create_code_loaders(config, split="train", fabric=fabric)
     code_stats = compute_code_stats_offline(loader_train, "train", fabric, config["normalize_codes"])
     print(f">> code_stats: {code_stats}")
-
     latent_dim = config["decoder"]["code_dim"]
 
-    # initialize model and optimizer
+    # load the nffm model from the checkpoint
+    nffm = import_nffm(config, fabric)
+
+    # generate the val set, size is num_samples x num_steps x num_epochs
+    lr=1e-4
+    val_mlp_dset = TZ_Dataset(torch.empty(0, latent_dim), torch.empty(0, 1))
+    collect_data(val_mlp_dset, nffm, latent_dim, config["n_epochs"], config["num_steps"], config["num_samples"], lr)
+    val_mlp_loader = DataLoader(val_mlp_dset, config["dset"]["batch_size"], shuffle=True)
+    
+    # initialize mlp model and optimizer
     rfmt_t = RefinementT(feature_dim=latent_dim, 
                          fabric=fabric, config=config)
-    opt = torch.optim.Adam(rfmt_t.parameters(), lr=1e-4)
+    opt = torch.optim.Adam(rfmt_t.parameters(), lr=lr)
     rfmt_t, opt = fabric.setup(rfmt_t, opt)
 
     best_loss = float("inf")
@@ -111,7 +122,7 @@ def main(config):
             # get actual z1 code, sample z0, sample a t
             z1 = normalize_code(batch, code_stats)
             z0 = sample_normal(z1.shape[0], latent_dim).to(fabric.device)
-            t = sample_time(z1.shape[0]).to(fabric.device)
+            t = sample_time_uniform(z1.shape[0]).to(fabric.device)
 
             # interpolate
             z_t = (1.0 - t) * z0 + t * z1
@@ -120,36 +131,41 @@ def main(config):
             batch_loss = rfmt_t.run_batch(X=z_t, t=t, opt=opt,
                                           collection_type="interpolate", epoch=epoch)
 
-            # loss in batch so far
-            epoch_loss += batch_loss * z_t.shape[0] # normalizes the loss per batch
+            # training loss in batch so far
+            epoch_loss += batch_loss * z_t.shape[0]
             num_examples += z_t.shape[0]
-
-        # get the loss for this epoch across the batches
+        
+        # get training the loss for this epoch across the batches
         if num_examples != 0:
             epoch_loss /= num_examples
         print(f" * epoch {epoch} >> avg loss: {epoch_loss:.6f}") # if time wandb
 
+        # get the validation loss
+        val_loss = rfmt_t.evaluate(val_mlp_loader, collection_type="interpolate", epoch=epoch)
+        rfmt_t.print_epoch_loss(epoch, epoch_loss, val_loss, path_name=config["csv_dir"],
+                                filename=f"interpolate_loss.csv")
+
         # save model checkpt
-        if epoch_loss < best_loss:
-            rfmt_t.save_checkpoint(loss=epoch_loss, model_type="interpolate")
+        if val_loss < best_loss:
+            rfmt_t.save_checkpoint(loss=val_loss, model_type="interpolate")
             best_model = copy.deepcopy(rfmt_t.state_dict())
-            best_loss = epoch_loss
+            best_loss = val_loss
             new_best_flag = True
 
         # for plotting
-        rfmt_t.plot_mse[epoch] = (epoch_loss, new_best_flag)
+        rfmt_t.plot_train_mse[epoch] = (epoch_loss, new_best_flag)
+        rfmt_t.plot_val_mse[epoch]   = (val_loss,   new_best_flag)
 
     # update model object to reflect the best model
-    rfmt_t.is_fit = True
-    rfmt_t.best_train_loss = best_loss
     rfmt_t.load_state_dict(best_model)
 
     # plot the training mse
-    save_plot = os.path.join(config["plots_path"], "interpolate_mse_graph_vanilla.png")
-    plot_mse_with_best_dict(mse_dict=rfmt_t.plot_mse, save_path=save_plot)
-
-    # evaluate on the sampled validation data
-    # rfmt_t.evaluate()
+    save_plot = os.path.join(config["plots_path"], "interpolate_train_mse_graph_vanilla.png")
+    plot_mse_with_best_dict(mse_dict=rfmt_t.plot_train_mse, save_path=save_plot)
+    
+    # plot the val mse
+    save_plot = os.path.join(config["plots_path"], "interpolate_val_mse_graph_vanilla.png")
+    plot_mse_with_best_dict(mse_dict=rfmt_t.plot_val_mse, save_path=save_plot)
 
 
 if __name__ == "__main__":

@@ -23,18 +23,17 @@ on_the_fly: False
 num_augmentations: null
 
 # training params
-n_epochs: 100 # for both interpolation and sampled based training
+n_epochs: 50 # to train interpolation mlp
 dset:
   batch_size: 128
 decoder:
   code_dim: 1024
 
-# for nffm sampling-based training
+# for nffm sampling-based data generation
 num_samples: 64
 num_steps: 100
-n_epochs_train: 20
-n_epochs_val: 5
-# wandb: True
+n_epochs_train: 80
+n_epochs_val: 20
 
 # output directory for collecting data
 out_dir: "${dirname}/t_data"
