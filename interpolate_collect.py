@@ -20,19 +20,7 @@ sys.path.append("/net/dali/home/mscbio/emg386/rfmt")
 from learn_t import RefinementT
 from tz_dataset import TZ_Dataset
 from plot_mse import plot_mse_with_best_dict
-from sample_collect import import_nffm, collect_data
-
-def assert_dir(config, key):
-    dir_name = config[key]
-    assert "${" not in dir_name, f"{dir_name} was not resolved: {dir_name}"
-    assert os.path.isabs(dir_name), f"{dir_name} is not an absolute path: {dir_name}"
-    os.makedirs(dir_name, exist_ok=True)
-
-    # this is just so i don't waste my time
-    test_file = os.path.join(dir_name, ".write_test")
-    with open(test_file, "w") as f:
-        f.write("ok")
-    os.remove(test_file)
+from utils_collect import assert_dir, import_nffm, collect_data
 
 
 @hydra.main(config_path="configs", config_name="collect_codes_t", version_base=None)

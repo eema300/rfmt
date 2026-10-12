@@ -9,19 +9,9 @@ from funcmol.models.nffm import create_nffm, sample_normal
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 sys.path.append("/net/dali/home/mscbio/emg386/rfmt")
-from interpolate_collect import assert_dir
-from sample_collect import collect_data, import_nffm
+from utils_collect import assert_dir, collect_data, import_nffm
 from tz_dataset import TZ_Dataset
-from learn_t import RefinementT, load_checkpoint
 
-def load_mlp_model(config, fabric, width, lr, checkpoint_path):
-    rfmt_t = load_checkpoint(chkpt_path=config[checkpoint_path], 
-                             feat_dim=width, fabric=fabric, config=config)
-    
-    opt = torch.optim.Adam(rfmt_t.parameters(), lr=lr)
-    rfmt_t, _ = fabric.setup(rfmt_t, opt)
-
-    return rfmt_t
 
 @hydra.main(config_path="configs", config_name="collect_codes_t", version_base=None)
 def main(config):
