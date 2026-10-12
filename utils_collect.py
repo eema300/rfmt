@@ -67,17 +67,19 @@ def collect_data(dataset: TZ_Dataset, nffm_model, width: int, num_epochs: int,
         # calculate step size
         t0 = 0.0
         t1 = 1.0
+        t  = t0
         dt = (t1 - t0) / float(num_steps)
 
         # x_t vector starts at x_0
         x = x0.to(nffm_model.device)
+        t_batch = torch.full((x.shape[0], 1), t, device=nffm_model.device)
 
         # sampling
         # # training dataset size = num_samples × num_steps
         for i in range(num_steps):
 
             # save x_t, t in the dataset
-            dataset.add_data(x_t=x, t=t)
+            dataset.add_data(x_t=x, t=t_batch)
 
             # take a time step for every x in x_t
             t = t0 + i * dt
@@ -93,4 +95,4 @@ def collect_data(dataset: TZ_Dataset, nffm_model, width: int, num_epochs: int,
                 x = x + dt * v
 
         # save the last x_t, t pair
-        dataset.add_data(x_t=x, t=t)
+        dataset.add_data(x_t=x, t=t_batch)
