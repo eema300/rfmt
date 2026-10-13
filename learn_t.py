@@ -84,18 +84,11 @@ class RefinementT(nn.Module):
             new_best_flag = False
 
             for _ in tqdm(range(steps_per_epoch)):
-                X, t = next(train_iter)   # never raises StopIteration on an infinite stream
+                X, t = next(train_iter)
                 batch_loss = self.run_batch(X=X, t=t, opt=opt,
                                             collection_type=collection_type, epoch=epoch)
                 epoch_loss += batch_loss * X.shape[0]
                 num_examples += X.shape[0]
-
-            # using infinite data but only for num epochs
-            for batch in tqdm(train_data_loader):
-                batch_loss = self.run_batch(X=batch[0], t=batch[1], opt=opt,
-                                            collection_type=collection_type, epoch=epoch)
-                epoch_loss += batch_loss * batch[0].shape[0]
-                num_examples += batch[0].shape[0]
 
             if num_examples != 0:
                 epoch_loss /= num_examples

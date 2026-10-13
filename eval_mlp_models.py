@@ -9,7 +9,7 @@ from funcmol.models.nffm import create_nffm, sample_normal
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 sys.path.append("/net/dali/home/mscbio/emg386/rfmt")
-from utils_collect import assert_dir, collect_data, import_nffm
+from utils_collect import assert_dir, collect_data, import_nffm, load_mlp_model
 from tz_dataset import TZ_Dataset
 
 
