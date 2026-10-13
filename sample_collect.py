@@ -49,7 +49,7 @@ def main(config):
     # train mlp model to predict t given x_t
     num_epochs_train = config["n_epochs_train"]
     steps_per_epoch = config["n_steps_per_epoch"]
-    rfmt_t = rfmt_t.fit(train_mlp_loader, val_mlp_loader, epochs=num_epochs_train, steps_per_epoch=steps_per_epoch
+    rfmt_t = rfmt_t.fit(train_mlp_loader, val_mlp_loader, epochs=num_epochs_train, steps_per_epoch=steps_per_epoch,
                         opt=opt, collection_type="sample")
     
     # plot training mse
