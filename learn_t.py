@@ -69,16 +69,26 @@ class RefinementT(nn.Module):
         print(f" * >> saved new best model with loss: {loss}")
 
     # this is for sample_collect.py
-    def fit(self, train_data_loader, val_data_loader, epochs: int, 
+    def fit(self, train_data_loader, val_data_loader, epochs: int, steps_per_epoch: int,
             opt: torch.optim.Optimizer, collection_type: str):
         
         best_loss = float("inf")
         best_model = copy.deepcopy(self.state_dict())
 
+        # stream across all epochs
+        train_iter = iter(train_data_loader)
+
         for epoch in range(epochs):
             epoch_loss = 0.0
             num_examples = 0
             new_best_flag = False
+
+            for _ in tqdm(range(steps_per_epoch)):
+                X, t = next(train_iter)   # never raises StopIteration on an infinite stream
+                batch_loss = self.run_batch(X=X, t=t, opt=opt,
+                                            collection_type=collection_type, epoch=epoch)
+                epoch_loss += batch_loss * X.shape[0]
+                num_examples += X.shape[0]
 
             # using infinite data but only for num epochs
             for batch in tqdm(train_data_loader):
@@ -94,7 +104,7 @@ class RefinementT(nn.Module):
             # get the validation loss
             val_loss = self.evaluate(val_data_loader, collection_type, epoch)
             self.print_epoch_loss(epoch, epoch_loss, val_loss, path_name=self.config["csv_dir"],
-                                  filename=f"interpolate_loss.csv")
+                                  filename=f"{collection_type}_loss.csv")
 
             if val_loss < best_loss:
                 self.save_checkpoint(loss=val_loss, model_type="sample")
