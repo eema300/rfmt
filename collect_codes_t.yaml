@@ -8,44 +8,71 @@ defaults:
 debug: False
 wandb: False
 seed: 1234
-nf_pretrained_path: "/net/dali/home/mscbio/emg386/weights/nf_qm9_20260330_frozen"
-nffm_pretrained_path: "/net/dali/home/mscbio/emg386/weights/nffm_qm9_20260504_145714_635534"
-exp_dir: "/net/dali/home/mscbio/emg386/nffm/exp"
-exp_name: "t_data_${dset.dset_name}_${now:%Y%m%d}_${now:%H%M%S}_${now:%f}"
-dirname: "${exp_dir}/${exp_name}"
-codes_dir: "/net/dali/home/mscbio/emg386/weights/nf_qm9_rotation_1_frozen"
-plots_path: "/net/dali/home/mscbio/emg386/rfmt"
-csv_dir: "/net/dali/home/mscbio/emg386/rfmt/t_preds"
 
-# data params
+# input and output paths
+# ----------------------
+# nffm, nf weights; latent codes
+nf_pretrained_path:   "/net/dali/home/mscbio/emg386/weights/nf_qm9_20260330_frozen" # neural field
+nffm_pretrained_path: "/net/dali/home/mscbio/emg386/weights/nffm_qm9_20260504_145714_635534" # nffm model
+codes_dir:            "/net/dali/home/mscbio/emg386/weights/nf_qm9_rotation_1_frozen" # molecule latent codes
+# working output dir
+exp_dir:              "/net/dali/home/mscbio/emg386/nffm/exp"
+exp_name:             "t_data_${dset.dset_name}_${now:%Y%m%d}" # year, month, day
+dirname:              "${exp_dir}/${exp_name}" # current working output dir
+# analysis outputs
+plots_path:           "${dirname}/plots" # mse plots
+t_preds_path:         "${dirname}/preds" # t_pred vs t_actual csvs
+losses_path:          "${dirname}/losses" # training and validation losses
+# mlp weights
+mlp_pretrained_path:  "${exp_dir}/mlp_checkpoints" # mlp checkpoints
+interp_pt_van_path:   "${mlp_pretrained_path}/interpolate-best_rfmt_t_vanilla.pt"
+sample_pt_van_path:   "${mlp_pretrained_path}/sample-best_rfmt_t_vanilla.pt"
+
+
+# output organization:
+# --------------------
+# nffm/
+# └── exp/
+#     ├── mlp_checkpoints/
+#     │   ├── interpolate-best_rfmt_t_vanilla.pt
+#     │   └── sample-best_rfmt_t_vanilla.pt
+#     └── t_data_<now>/
+#         ├── plots/
+#         │   ├── interpolate_train_mse_graph_vanilla.png
+#         │   ├── interpolate_val_mse_graph_vanilla.png
+#         │   ├── sample_train_mse_graph_vanilla.png
+#         │   └── sample_val_mse_graph_vanilla.png
+#         ├── preds/
+#         │   ├── interpolate_train_vanilla.csv
+#         │   ├── interpolate_val_vanilla.csv
+#         │   ├── sample_train_vanilla.csv
+#         │   └── sample_val_vanilla.csv
+#         └── losses/
+#             ├── interpolate_loss_vanilla.csv
+#             └── sample_loss_vanilla.csv
+
+
+# latent code params
 normalize_codes: 1
-on_the_fly: False
+on_the_fly: False # False: don't re-encode molecules (use saved ones), True: re-encode molecule latent codes
 num_augmentations: null
-
-# training params
-n_epochs: 50 # to train interpolation mlp
 dset:
   batch_size: 128
 decoder:
   code_dim: 1024
 
+# for generating validation set
+# num_samples x num_steps x n_epochs_val = val dataset size
+n_epochs_val: 10
+
 # for nffm sampling-based data generation
-num_samples: 64
-num_steps: 100
-n_epochs_train: 80
-n_epochs_val: 20
-n_steps_per_epoch: 750
+num_samples: 64 # for val set num samples
+num_steps: 100 # for infinite stream and val set num_steps
+n_steps_per_epoch: 380 # for infinite stream, makes about the same size as interpolation dset for mlp_batch_size * n_steps_per_epoch
 
-# output directory for collecting data
-out_dir: "${dirname}/t_data"
-
-# output for mlp info
-mlp_out_dir: "${dirname}/mlp"
-
-# for loading the mlp checkpoints
-mlp_pretrained_path: "${exp_dir}/vanilla_mlp"
-interpolate_pt_path: "${mlp_pretrained_path}/interpolate-best_rfmt_t.pt"
-sample_pt_path: "${mlp_pretrained_path}/sample-best_rfmt_t.pt"
+# mlp training and etc params
+mlp_batch_size: 256
+n_epochs: 40
 
 # set the running dir
 hydra:

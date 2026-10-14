@@ -2,7 +2,6 @@
 this is the dataset class the data loader will use
 '''
 
-from pathlib import Path
 import torch
 from torch.utils.data import Dataset, IterableDataset
 from funcmol.models.nffm import sample_normal
@@ -25,7 +24,7 @@ class TZ_Dataset(Dataset):
 
 # for the infinite training dataset
 class NFFMStream(IterableDataset):
-    def __init__(self, nffm, width, minibatch, num_samples=64, num_steps=100, eps=1e-4):
+    def __init__(self, nffm, width, minibatch, num_samples=256, num_steps=100, eps=1e-4):
         self.nffm, self.width = nffm, width
         self.num_samples, self.num_steps = num_samples, num_steps
         self.eps, self.minibatch = eps, minibatch
@@ -49,7 +48,7 @@ class NFFMStream(IterableDataset):
             # save the last pair
             xs.append(x); ts.append(t_batch)
             
-            X, T = torch.cat(xs), torch.cat(ts) # 6400 rows
+            X, T = torch.cat(xs), torch.cat(ts)
             perm = torch.randperm(X.shape[0], device=X.device)
             X, T = X[perm], T[perm]
             

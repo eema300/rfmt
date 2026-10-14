@@ -27,9 +27,10 @@ from utils_collect import assert_dir, import_nffm, collect_data
 def main(config):
     config = OmegaConf.to_container(config, resolve=True)
 
-    assert_dir(config, "out_dir")
-    assert_dir(config, "codes_dir")
-    assert_dir(config, "mlp_out_dir")
+    assert_dir(config, "plots")
+    assert_dir(config, "t_preds_path")
+    assert_dir(config, "losses_path")
+    assert_dir(config, "mlp_pretrained_path")
 
     fabric = setup_fabric(config)
 
@@ -83,11 +84,11 @@ def main(config):
     # load the nffm model from the checkpoint
     nffm = import_nffm(config, fabric)
 
-    # generate the val set, size is num_samples x num_steps x num_epochs
+    # generate the val set, size is num_samples x num_steps x n_epochs_val
     lr=1e-4
     val_mlp_dset = TZ_Dataset(torch.empty(0, latent_dim), torch.empty(0, 1))
-    collect_data(val_mlp_dset, nffm, latent_dim, config["n_epochs"], config["num_steps"], config["num_samples"], lr)
-    val_mlp_loader = DataLoader(val_mlp_dset, config["dset"]["batch_size"], shuffle=True)
+    collect_data(val_mlp_dset, nffm, latent_dim, config["n_epochs_val"], config["num_steps"], config["num_samples"], lr)
+    val_mlp_loader = DataLoader(val_mlp_dset, config["mlp_batch_size"], shuffle=True)
     
     # initialize mlp model and optimizer
     rfmt_t = RefinementT(feature_dim=latent_dim, 
@@ -130,8 +131,8 @@ def main(config):
 
         # get the validation loss
         val_loss = rfmt_t.evaluate(val_mlp_loader, collection_type="interpolate", epoch=epoch)
-        rfmt_t.print_epoch_loss(epoch, epoch_loss, val_loss, path_name=config["csv_dir"],
-                                filename=f"interpolate_loss.csv")
+        rfmt_t.print_epoch_loss(epoch, epoch_loss, val_loss, path_name=config["losses_path"],
+                                filename=f"interpolate_loss_vanilla.csv")
 
         # save model checkpt
         if val_loss < best_loss:
