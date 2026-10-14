@@ -1,10 +1,8 @@
 import hydra
 import torch
-import sys
 import omegaconf
 from funcmol.utils.utils_base import setup_fabric
 from torch.utils.data import DataLoader
-sys.path.append("/net/dali/home/mscbio/emg386/rfmt")
 from utils_collect import collect_data, import_nffm, load_mlp_model
 from tz_dataset import TZ_Dataset
 

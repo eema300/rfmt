@@ -1,11 +1,9 @@
 import hydra
 import torch
 import os
-import sys
 import omegaconf
 from funcmol.utils.utils_base import setup_fabric
 from torch.utils.data import DataLoader
-sys.path.append("/net/dali/home/mscbio/emg386/rfmt")
 from learn_t import RefinementT
 from tz_dataset import TZ_Dataset, NFFMStream
 from plot_mse import plot_mse_with_best_dict

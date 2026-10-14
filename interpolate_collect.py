@@ -5,7 +5,6 @@ this will build the (z_t, t) dataset by interpolating num_epoch times per molecu
 import hydra
 import torch
 import os
-import sys
 import copy
 from torch.utils.data import DataLoader
 from funcmol.utils.utils_base import setup_fabric
@@ -16,7 +15,6 @@ from funcmol.dataset.dataset_code import create_code_loaders
 from funcmol.dataset.field_maker import FieldMaker
 from funcmol.models.nffm import sample_normal, sample_time_uniform
 from omegaconf import OmegaConf
-sys.path.append("/net/dali/home/mscbio/emg386/rfmt")
 from learn_t import RefinementT
 from tz_dataset import TZ_Dataset
 from plot_mse import plot_mse_with_best_dict
